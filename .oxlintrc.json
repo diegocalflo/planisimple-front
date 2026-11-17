@@ -1,8 +1,69 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": ["react", "typescript", "oxc", "import"],
+  "ignorePatterns": ["dist", "src/contracts/openapi.d.ts"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "import/no-relative-parent-imports": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/ui/**", "src/lib/**", "src/contracts/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/", "message": "ui, lib y contracts no importan nada del proyecto." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/api/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/(app|activities|documents|account|admin|ui)(/|$)", "message": "api solo importa contracts y lib." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/documents/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/(app|activities|account|admin|contracts)(/|$)", "message": "documents solo importa api, ui y lib." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/activities/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/(app|account|admin)(/|$)", "message": "Las actividades no importan app, account ni admin." },
+          { "regex": "^@/activities/[^_]", "message": "Las actividades no se importan entre sí: lo común sube a activities/_shared o a documents." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/account/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/(app|activities|admin)(/|$)", "message": "account no importa app, admin ni actividades." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/admin/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/(app|activities|account)(/|$)", "message": "admin no importa app, account ni actividades." }
+        ] }]
+      }
+    },
+    {
+      "files": ["src/app/**"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": [
+          { "regex": "^@/activities/[^_][^/]*/", "message": "Cada actividad se consume solo desde activities/registry." }
+        ] }]
+      }
+    }
+  ]
 }

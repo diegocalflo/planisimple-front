@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# PlaniSimple Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web de PlaniSimple: React + TypeScript con Vite. Consume la API del
+backend ([planisimple-back](https://github.com/diegocalflo/planisimple-back)) y
+usa Firebase solo para iniciar sesión.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node 22 o 24 y npm.
+- Para trabajar contra el backend local: sus emuladores con Docker
+  (ver `docs/desarrollo-local.md` del backend).
 
-## React Compiler
+## Primeros pasos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
+cp .env.example .env.local   # valores para los emuladores del backend
+npm run dev                  # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Con los emuladores del backend sembrados, el usuario de prueba es
+`docente.prueba@planisimple.local` / `prueba-local-123`.
+
+## Comandos
+
+| Comando | Descripción |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo. |
+| `npm run lint` | oxlint, incluidas las reglas de dependencias entre carpetas. |
+| `npm run typecheck` | `tsc -b` sobre la app y la configuración. |
+| `npm test` | Pruebas con Vitest. |
+| `npm run build` | Typecheck y build de producción en `dist/`. |
+| `npm run contracts` | Regenera los tipos de la API desde el OpenAPI del backend. |
+
+## Documentación
+
+- `CLAUDE.md` — estructura, reglas de dependencias, cómo se añade una actividad y convenciones.
+- `docs/integracion-frontend.md` del backend — contrato y flujo de la API.
