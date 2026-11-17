@@ -34,5 +34,7 @@ Con los emuladores del backend sembrados, el usuario de prueba es
 
 ## Documentación
 
-- `CLAUDE.md` — estructura, reglas de dependencias, cómo se añade una actividad y convenciones.
+- `CLAUDE.md` — estructura, comandos, convenciones y dónde vive cada instrucción para Claude Code.
+- `.claude/` — rules, skills, hooks y permisos de Claude Code. Se activan al abrir Claude Code en esta carpeta.
+- `docs/decisiones/` — decisiones de arquitectura del front.
 - `docs/integracion-frontend.md` del backend — contrato y flujo de la API.

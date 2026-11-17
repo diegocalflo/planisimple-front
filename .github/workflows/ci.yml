@@ -10,6 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: CLAUDE.md dentro del tope
+        run: test "$(wc -l < CLAUDE.md)" -le 200
+      - name: Rules con paths
+        run: |
+          for f in $(find .claude/rules -name '*.md'); do
+            head -n 20 "$f" | grep -q '^paths:' || { echo "Sin paths: $f"; exit 1; }
+          done
       - uses: actions/setup-node@v4
         with:
           node-version: 22

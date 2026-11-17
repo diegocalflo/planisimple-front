@@ -1,95 +1,75 @@
 # CLAUDE.md
 
-Frontend de PlaniSimple: React 19 + TypeScript + Vite. Habla con el backend
-(repo `planisimple-back`) solo por su API HTTP; de Firebase usa únicamente Auth.
+## Proyecto
+
+Frontend de PlaniSimple, la app web donde las docentes generan planificaciones y otros
+documentos con IA. El backend vive en otro repo (`planisimple-back`): este solo le habla
+por su API HTTP y de Firebase usa únicamente Auth.
+
+## Stack
+
+- React y TypeScript con Vite; React Router con una ruta diferida por actividad.
+- Estado del servidor con TanStack Query, sin estado global propio.
+- Cliente `openapi-fetch` con tipos generados del OpenAPI del backend ([ADR 0001](docs/decisiones/0001-contrato-openapi.md)).
+- Generaciones por polling, sin Firestore en el navegador ([ADR 0002](docs/decisiones/0002-polling-sin-firestore.md)).
+- Documentos guardados en el navegador con Dexie (IndexedDB); Word con `docx`.
+- Vitest y Testing Library; oxlint, que además impone las dependencias entre carpetas.
 
 ## Comandos
 
-- `npm ci` — instala lo fijado en el lockfile.
-- `npm run dev` — servidor local en `http://localhost:5173` (el origen que el backend permite en CORS).
-- `npm run lint` / `npm run typecheck` / `npm test` / `npm run build` — lo mismo que corre la CI.
-- `npm run contracts` — regenera `src/contracts/openapi.d.ts` desde
-  `../planisimple-back/docs/api/openapi.json` (otra ruta con `OPENAPI=...`). No se edita a mano.
+- `npm ci`: instala lo fijado en el lockfile.
+- `npm run dev`: `http://localhost:5173`, el origen que acepta el CORS del backend. La configuración va en `.env.local` (ver `.env.example`).
+- `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.
+- `npm run contracts`: regenera `src/contracts/openapi.d.ts`; ver la skill `actualizar-contrato`.
 
-Verificación obligatoria tras cambios: lint, typecheck, test y build.
+**Terminado** es lint, typecheck, pruebas y build en verde. El hook `Stop` corre los tres
+primeros sobre lo cambiado; la CI corre los cuatro en cada push a `main` y en cada PR.
 
 ## Estructura
 
-```
-src/
-  app/          arranque, rutas, proveedores, layouts y guardas
-  activities/   registry.ts, _shared/ (shell, useGeneration) y una carpeta por actividad
-  documents/    modelo del documento, base local (Dexie), exportación a Word y «Mis documentos»
-  account/      sesión, login y saldo de créditos
-  api/          auth (Firebase), cliente tipado, errores y hooks de TanStack Query en queries/
-  ui/           componentes visuales y estilos, sin lógica de negocio
-  lib/          funciones puras, sin React
-  contracts/    tipos generados del OpenAPI del backend
-```
+`src/` se organiza por dominio. Entre paréntesis, lo que cada carpeta puede importar;
+oxlint rechaza el resto y también los imports con `../`.
 
-Una carpeta se crea cuando tiene contenido: `admin/` y `activities/_shared/attachments/`
-aparecen cuando haya panel o adjuntos.
-
-## Reglas de dependencias
-
-Las impone oxlint (`.oxlintrc.json`); un import prohibido rompe el lint y la CI.
-
-| Carpeta | Puede importar |
-| --- | --- |
-| `ui`, `lib`, `contracts` | Nada del proyecto |
-| `api` | `contracts` y `lib` |
-| `documents` | `api`, `ui` y `lib` |
-| `activities`, `account`, `admin` | `documents`, `api`, `ui`, `lib` y `contracts` |
-| `app` | Todo, pero cada actividad solo a través de `activities/registry` |
-
-- Las actividades no se importan entre sí; lo común sube a `activities/_shared` o a `documents`.
-- `account` y `admin` no se importan entre sí ni importan actividades.
-- Imports con `./` dentro de la misma carpeta o hacia abajo; todo lo demás con `@/`. Nunca `../`.
-- No hay archivos barril, salvo el `index.ts` de cada actividad.
-
-## Cómo funciona una actividad
-
-1. `registry.ts` lista cada actividad: id, id del contrato (`apiActivity`), título, categoría,
-   entrega y su `import()` diferido.
-2. `app/router.tsx` crea una ruta `actividades/<id>/:documentId?` por entrada. El shell y la
-   actividad, con docx, se descargan al entrar.
-3. El `index.ts` de la actividad exporta su `ActivityDefinition`: `Form`, `Viewer`, `exportDocx`
-   y `documentTitle`.
-4. `ActivityShell` muestra el costo, el formulario y el estado; con `documentId` muestra el
-   documento guardado y su descarga.
-5. `useGeneration` crea el trabajo, hace polling, permite cancelar, guarda el resultado en
-   Dexie y **después** confirma la entrega.
-6. `Viewer` y `exporter` parten de los mismos bloques (`blocks.ts` → `DocumentBlock[]`), así la
-   pantalla y el Word muestran lo mismo.
-
-### Cómo se añade una actividad
-
-1. Que el backend la tenga en su contrato; luego `npm run contracts`.
-2. Crea `src/activities/<id>/`, en inglés y con guiones, con `Form.tsx`, `Viewer.tsx`,
-   `exporter.ts` e `index.ts`.
-3. Añade su entrada en `registry.ts`. No se toca `router.tsx` ni otra actividad.
-
-## Datos del servidor
-
-- Toda llamada pasa por `api/client.ts`, que añade el ID token de Firebase. Los componentes
-  usan los hooks de `api/queries/`, nunca el cliente.
-- `POST /v1/generaciones` lleva `Idempotency-Key` (UUID por intento; los reintentos lo reusan).
-- Estado por polling con la secuencia que sugiere el backend (2, 3, 5, 8 y luego 10 s).
-- El resultado se persiste en el navegador antes de `POST .../confirmacion`, que lo borra del servidor.
-- Errores: `ApiError` con `code` e `requestId`; el `requestId` se muestra para soporte.
-- El navegador nunca toca Firestore: el backend lo niega todo al cliente.
+- `app/`: arranque, rutas, proveedores, layouts y guardas (todo; cada actividad, solo vía `activities/registry`).
+- `activities/`: `registry.ts`, `_shared/` y una carpeta por actividad (documents, api, ui, lib, contracts).
+- `documents/`: modelo del documento, base local, exportación a Word y «Mis documentos» (api, ui, lib).
+- `account/`: sesión, login y saldo de créditos (documents, api, ui, lib, contracts).
+- `api/`: Firebase Auth, cliente tipado, errores y hooks en `queries/` (contracts, lib).
+- `ui/`: componentes visuales y estilos (nada del proyecto).
+- `lib/`: funciones puras, sin React (nada del proyecto).
+- `contracts/`: tipos generados del OpenAPI, que no se editan (nada del proyecto).
+- `docs/decisiones/`: ADRs del front.
 
 ## Convenciones
 
+- Imports con `./` dentro de la misma carpeta o hacia abajo; todo lo demás con `@/`.
 - Carpetas en inglés y con guiones; componentes `PascalCase.tsx`; hooks `useAlgo.ts`; el resto `camelCase.ts`.
-- Identificadores en inglés; los campos de la API se quedan como los define el contrato (español).
+- Identificadores en inglés; los campos de la API quedan como en el contrato, en español.
 - Textos de la interfaz en español de Chile.
-- Pruebas junto al archivo que prueban (`Form.test.tsx`), con Vitest y Testing Library.
-- Sin secretos en el repo: la configuración va en `.env.local` (ver `.env.example`).
+- Sin archivos barril, salvo el `index.ts` de cada actividad.
+- Una carpeta se crea cuando tiene contenido.
+- Sin secretos en el repo: la configuración local va en `.env.local`.
 
-## Diferencias con la nota de arquitectura del vault
+## Git
 
-- Front y back son repos separados: el código vive en `src/` y `packages/contracts` se
-  reemplaza por los tipos generados en `src/contracts/`.
-- Cliente `openapi-fetch` en vez de `hc`: ADR 0004 del backend, pendiente de decisión conjunta.
-- Sin `api/listeners.ts`: el backend usa polling y niega Firestore al cliente (ADR 0002 del backend).
+- Rama principal `main`. La CI corre en cada push a `main` y en cada PR.
+- Commits con Conventional Commits, en español: `feat: …`, `fix: …`, `chore: …`.
+- Sin líneas de atribución a Claude en commits ni en PR (`attribution` vacío en `.claude/settings.json`).
+- `git commit` y `git push` piden confirmación; el push forzado y `--no-verify` están bloqueados.
+- No se cambian sin acordarlo con el equipo: `.oxlintrc.json`, `.claude/`, este archivo y `src/contracts/` (salvo con `npm run contracts`).
+
+## Dónde vive cada instrucción
+
+| Si la instrucción… | Va en |
+| --- | --- |
+| Aplica a todo el repo | Este archivo, de 200 líneas como máximo (lo comprueba la CI) |
+| Aplica a una carpeta o a un tipo de archivo | `.claude/rules/<tema>.md`, con `paths` |
+| Es un procedimiento con pasos | `.claude/skills/<skill>/SKILL.md` |
+| Produce mucho ruido y solo importa la conclusión | `.claude/agents/<agente>.md` |
+| No debe depender del criterio del modelo | Un permiso en `.claude/settings.json` o un hook en `.claude/hooks/` |
+| Ya la verifica una herramienta | Una línea que nombra la herramienta |
+| Explica el porqué de una decisión | `docs/decisiones/` |
+| Es solo tuya | `CLAUDE.local.md` o `.claude/settings.local.json`, ignorados por Git |
+
+Hoy hay rules para `activities`, `api`, `documents`, `ui` y `pruebas`, y skills
+`nueva-actividad` y `actualizar-contrato`.
